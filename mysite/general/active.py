@@ -4,6 +4,7 @@ from consts import lavaFunc, stamp_maxes, pearlable_skillsList, max_VialLevel, c
 from utils.all_talentsDict import all_talentsDict
 from utils.data_formatting import mark_advice_completed
 from utils.logging import get_logger
+from math import ceil, floor
 from flask import g as session_data
 
 from utils.text_formatting import notateNumber
@@ -544,12 +545,14 @@ def getBuboAdviceGroup() -> AdviceGroup:
     optional_talents = 'Optional Talents for Killroy and first CC'
     library = 'Talent Books- Checkouts and Max Level'
     other = 'Misc Info and Notes'
+    tenteyecle400 = 'Tenteyecle Level 400 | +101 bonus talents'
     bubo_advice = {
         bb: [],
         po: [],
         alch_talents: [],
         optional_talents: [],
         library: [],
+        tenteyecle400: [],
         other: []
     }
 
@@ -734,6 +737,190 @@ def getBuboAdviceGroup() -> AdviceGroup:
             progression=aura_level,
             goal=next_aura_width,
             completed=aura_level >= best_bubo.max_talents_over_books
+        ))
+
+        # Tenteyecle 400
+        ################################################
+
+        # Talents- Tenteyecle Base
+        tenteyecl_objectives_complete = 0
+        tenteyecl_base_level = ccing_preset.get('483', 0) # Tenteyecle
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Talents- Tenteyecle:"
+                  f"<br>{tenteyecl_base_level}/299 Base Tenteyecle Level",
+            picture_class='tenteyecle',
+            progression=tenteyecl_base_level,
+            goal=299
+        ))
+        if tenteyecl_base_level >= 299:
+            tenteyecl_objectives_complete += 1
+
+        # Talents- Symbols of Beyond
+        symbols_of_beyond_level = ccing_preset.get('539', 0) # Symbols of Beyond
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Talents- Symbols of Beyond:"
+                  f"<br>{symbols_of_beyond_level}/280 Symbols of Beyond (+15)",
+            picture_class='symbols-of-beyond-p',
+            progression=symbols_of_beyond_level,
+            goal=280
+        ))
+        if symbols_of_beyond_level >= 280:
+            tenteyecl_objectives_complete += 1
+
+        # Achievements- Maroon Warship
+        maroon_warship_complete = session_data.account.achievements['Maroon Warship']['Complete']
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"W5 Achievement- Maroon Warship:"
+                  f"<br>+{int(maroon_warship_complete)}/1 Bonus Talent Level",
+            picture_class='maroon-warship',
+            progression=int(maroon_warship_complete),
+            goal=1
+        ))
+        if maroon_warship_complete:
+            tenteyecl_objectives_complete += 1
+
+        # Rift Slug
+        missing_companion_data_txt = ''
+        if not session_data.account.companions['Companion Data Present']:
+            missing_companion_data_txt = '<br>Note: Could be inaccurate. Companion data not found!'
+        has_rift_slug_companion = session_data.account.companions['Rift Slug']
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Companions- Rift Slug:"
+                f"<br>+{25 if has_rift_slug_companion else 0}/25 Bonus Talent Levels"
+                f"{missing_companion_data_txt}",
+            picture_class='crystal-custard',
+            progression=int(has_rift_slug_companion),
+            goal=1
+        ))
+        if has_rift_slug_companion:
+            tenteyecl_objectives_complete += 1
+
+        # Endless Summoning
+        endless_summoning_battles = min(99, session_data.account.summoning['Battles']['Endless'])
+        bonus_equinox_max_levels = min(14, session_data.account.summoning['Endless Bonuses']['+ Equinox Max LV'])
+        if endless_summoning_battles < 99:
+            bubo_advice[tenteyecle400].append(Advice(
+                label=f"Endless Summoning- Stage:"
+                    f"<br>Stage {endless_summoning_battles}/99"
+                    f"<br>+{bonus_equinox_max_levels}/14 Equinox Symbols max levels",
+                picture_class='endless-summoning',
+                progression=endless_summoning_battles,
+                goal=99
+            ))
+        if endless_summoning_battles >= 99:
+            tenteyecl_objectives_complete += 1
+
+        # Equinox- Equinox Symbols
+        equinox_symbols_level = session_data.account.equinox_bonuses['Equinox Symbols']['CurrentLevel']
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Equinox- Equinox Symbols:"
+                f"<br>+{min(23, equinox_symbols_level)}/23 Bonus Talent Levels",
+            picture_class='equinox-symbols',
+            progression=equinox_symbols_level,
+            goal=23
+        ))
+        if equinox_symbols_level >= 23:
+            tenteyecl_objectives_complete += 1
+
+        # Divninity- Arctis Minor Link Bonus
+        arctis_base = 15
+        bigp_value = session_data.account.alchemy_bubbles['Big P']['BaseValue']
+        div_minorlink_value = best_bubo.divinity_level / (best_bubo.divinity_level + 60)
+        final_arctis_result = ceil(arctis_base * bigp_value * div_minorlink_value)
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"{{{{ Divinity|#divinity }}}}- Arctis Minor Link Bonus:"
+                f"<br>+{min(18, final_arctis_result)}/18 Bonus Talent Levels"
+                f"{'<br>Note: Arctis not linked to your best bubo' if not best_bubo.isArctisLinked() else f'<br>Check {{{{ Divinity|#divinity }}}} for breakpoints'}",
+            picture_class='arctis',
+            progression=final_arctis_result,
+            goal=18
+        ))
+        if final_arctis_result >= 18:
+            tenteyecl_objectives_complete += 1
+
+        # Family Bonuses- ES
+        es_family_bonus = floor(session_data.account.family_bonuses['Elemental Sorcerer']['Value'])
+        es_highest_level = session_data.account.family_bonuses['Elemental Sorcerer']['Level']
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Family Bonus- Elemental Sorcerer:"
+                f"<br>{min(719, es_highest_level)}/719 Elemental Sorcerer Level"
+                f"<br>+{min(13, es_family_bonus)}/13 Bonus Talent Levels",
+            picture_class='elemental-sorcerer-icon',
+            progression=es_highest_level,
+            goal=719
+        ))
+        if es_highest_level >= 719:
+            tenteyecl_objectives_complete += 1
+
+        # Rift- Sneak Mastery 3
+        sneak_mastery_level = min(3, session_data.account.sneaking['MaxMastery'])
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Rift- Sneaking Mastery:"
+                f"<br>Mastery {sneak_mastery_level}/3 (+5)",
+            picture_class='sneaking-mastery',
+            progression=sneak_mastery_level,
+            goal=3
+        ))
+        if sneak_mastery_level >= 3:
+            tenteyecl_objectives_complete += 1
+
+        bubo_advice[tenteyecle400].append(Advice(
+            label='Complete all 9 objectives above'
+                  '<br>Then complete 1 objective below'
+                  '<br>These take WAY more effort!',
+            picture_class='pinchy',
+            progression=tenteyecl_objectives_complete,
+            goal=9
+        ))
+
+        # Difficult option- Endless Summoning
+        if endless_summoning_battles < 115:
+            bubo_advice[tenteyecle400].append(Advice(
+                label=f"Endless Summoning- Stage:"
+                    f"<br>Stage {endless_summoning_battles}/114"
+                    f"<br>+{bonus_equinox_max_levels}/15 Equinox Symbols max levels"
+                    f"<br>Note: +1 Equinox Symbols max level",
+                picture_class='endless-summoning',
+                progression=endless_summoning_battles,
+                goal=115
+            ))
+        else:
+            bubo_advice[tenteyecle400].append(Advice(
+                label=f"Equinox- Equinox Symbols:"
+                    f"<br>+{equinox_symbols_level}/24 Bonus Talent Levels",
+                picture_class='equinox-symbols',
+                progression=equinox_symbols_level,
+                goal=24
+            ))
+
+        # Difficult option- Arctis
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"{{{{ Divinity|#divinity }}}}- Arctis Minor Link Bonus:"
+                f"<br>+{min(19, final_arctis_result)}/19 Bonus Talent Levels"
+                f"{'<br>Note: Arctis not linked to your best bubo' if not best_bubo.isArctisLinked() else f'<br>Check {{{{ Divinity|#divinity }}}} for breakpoints'}",
+            picture_class='arctis',
+            progression=final_arctis_result,
+            goal=19
+        ))
+
+        # Difficult option- ES Level
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Family Bonus- Elemental Sorcerer:"
+                f"<br>{min(885, es_highest_level)}/885 Elemental Sorcerer Level"
+                f"<br>+{min(14, es_family_bonus)}/14 Bonus Talent Levels",
+            picture_class='elemental-sorcerer-icon',
+            progression=es_highest_level,
+            goal=885
+        ))
+
+        # Tenteyecle Level
+        tenteyecle_level = tenteyecl_base_level + bubo_bonus_levels
+        bubo_advice[tenteyecle400].append(Advice(
+            label=f"Level 400 Tenteyecle for 4s CDR"
+                  f"<br>+{tenteyecle_level}/400 Talent Level",
+            picture_class='tenteyecle',
+            progression=tenteyecle_level,
+            goal=400
         ))
 
         #Other / Misc stuff
